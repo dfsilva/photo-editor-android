@@ -1,4 +1,10 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven'
+
+group = 'com.ahmedadeltito'
+version = '0.0.1'
+
+def baseVersion = "0.1"
 
 android {
     compileSdkVersion 27
@@ -28,4 +34,68 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:27.0.2'
     testCompile 'junit:junit:4.12'
+}
+
+String ossrhUsername = ""
+String ossrhPassword = ""
+boolean isDeployConfigured = false
+if (project.rootProject.file('gradle.properties').exists()) {
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('gradle.properties').newDataInputStream())
+    ossrhUsername = properties.getProperty("ossrhUsername", "")
+    ossrhPassword = properties.getProperty("ossrhPassword", "")
+    version = baseVersion + "." + properties.getProperty("build_index", "")
+
+    print("##teamcity[buildNumber '$version']")
+
+    nexusStaging {
+        username ossrhUsername
+        password ossrhPassword
+    }
+
+    isDeployConfigured = true
+}
+
+project.afterEvaluate {
+
+    if (isDeployConfigured) {
+
+        uploadArchives {
+            repositories {
+                mavenDeployer {
+                    repository(url: "http://nexus.diegosilva.com.br:8081/content/repositories/snapshots/") {
+                        authentication(userName: ossrhUsername, password: ossrhPassword)
+                    }
+
+                    pom.project {
+                        name 'Photo Editor SDK'
+                        packaging 'aar'
+                        description 'Photo editor SDK'
+                        url 'https://github.com/dfsilva/photo-editor-android'
+
+                        scm {
+                            url 'scm:git@github.com:dfsilva/photo-editor-android.git'
+                            connection 'scm:git@github.com:dfsilva/photo-editor-android.git'
+                            developerConnection 'scm:git@github.com:dfsilva/photo-editor-android.git'
+                        }
+
+                        licenses {
+                            license {
+                                name 'The MIT License (MIT)'
+                                url 'http://opensource.org/licenses/MIT'
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id 'dfsilva'
+                                name 'Diego Silva'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
